@@ -1,10 +1,10 @@
 import javax.swing.*;
+import javax.swing.Timer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.sql.Time;
 import java.util.Random;
 
 public class TelaJogo extends JPanel implements ActionListener {
@@ -14,75 +14,44 @@ public class TelaJogo extends JPanel implements ActionListener {
     private static final int LARGURA_TELA = 1300;
     private static final int ALTURA_TELA = 750;
     private static final int TAMANHO_BLOCO = 50;
-    private static final int UNIDADES = LARGURA_TELA * ALTURA_TELA / (TAMANHO_BLOCO * TAMANHO_BLOCO);
     private static final int INTERVALO = 200;
     private static final String NOME_FONTE = "Ink Free";
-    private static final int[] eixoX = new int[UNIDADES];
-    private static final int[] eixoY = new int[UNIDADES];
+
+    private static final int UNIDADES = LARGURA_TELA * ALTURA_TELA / (TAMANHO_BLOCO * TAMANHO_BLOCO);
+    private static final Node[] SNAKE = new Node[UNIDADES];
     private int corpoCobra = 6;
-    private int blocosComidos ;
+    private int blocosComidos;
+
+    private char direcao = 'D';
+
+    protected boolean estaRodando = false;
+
     private int blocoX;
     private int blocoY;
-    private char direcao = 'D';
-    private boolean estaRodando = false;
-    JButton botao;
-    Timer timer;
-    Random random;
 
-    TelaJogo(){
+    Random random;
+    JButton botaoNovoJogo;
+    Timer timer;
+
+
+    public TelaJogo(){
         random = new Random();
         setPreferredSize(new Dimension(LARGURA_TELA, ALTURA_TELA));
-        setBackground(Color.DARK_GRAY);
-        setFocusable(true);
         addKeyListener(new LeitorDeTeclasAdapter());
+        setBackground(Color.DARK_GRAY);
+        posicionandoCobra();
+        setFocusable(true);
 
-        botao = new JButton("Novo Jogo");
 
-        botao.setBounds(650, 650, 100, 50);
+        botaoNovoJogo = new JButton("Novo Jogo");
 
-        ActionListener e = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-            }
-        };
+        botaoNovoJogo.setBounds(475, 650, 150, 50);
+        botaoNovoJogo.addActionListener(e);
 
-        botao.addActionListener(e);
 
         iniciarJogo();
     }
 
-    @Override
-    public void paintComponent(Graphics g){
-        super.paintComponent(g);
-        desenharTela(g);
-    }
-
-    public void desenharTela(Graphics g){
-
-        if (estaRodando){
-
-            g.setColor(Color.red);
-            g.fillOval(blocoX, blocoY, TAMANHO_BLOCO, TAMANHO_BLOCO);
-
-            for (int i = 0; i < corpoCobra; i++){
-                if (i == 0){
-                    g.setColor(Color.green);
-                    g.fillRect(eixoX[0], eixoY[0], TAMANHO_BLOCO, TAMANHO_BLOCO);
-                } else {
-                    g.setColor(new Color(45, 180, 0));
-                    g.fillRect(eixoX[i], eixoY[i], TAMANHO_BLOCO, TAMANHO_BLOCO);
-                }
-            }
-            g.setColor(Color.red);
-            g.setFont(new Font(NOME_FONTE, Font.BOLD, 40));
-            FontMetrics metrics = getFontMetrics(g.getFont());
-            g.drawString("Pontos: " + blocosComidos, (LARGURA_TELA - metrics.stringWidth("Pontos: " + blocosComidos)) / 2, g.getFont().getSize());
-
-        } else {
-            fimDeJogo(g);
-        }
-
-    }
 
     public void iniciarJogo(){
         criarBloco();
@@ -91,9 +60,127 @@ public class TelaJogo extends JPanel implements ActionListener {
         timer.start();
     }
 
-    private void criarBloco(){
+    @Override
+    public void paintComponent(Graphics g){
+        super.paintComponent(g);
+        desenharTela(g);
+    }
+
+    public void desenharCobra(Graphics g){
+        for (int i = 0; i < corpoCobra; i++){
+            if (i == 0){
+                g.setColor(Color.green);
+                g.fillRect(SNAKE[0].x, SNAKE[0].y, TAMANHO_BLOCO, TAMANHO_BLOCO);
+            } else {
+                g.setColor(new Color(45, 180, 0));
+                g.fillRect(SNAKE[i].x, SNAKE[i].y, TAMANHO_BLOCO, TAMANHO_BLOCO);
+            }
+        }
+    }
+
+    public void desenharAnuncioP(Graphics g){
+
+        g.setColor(Color.red);
+        g.setFont(new Font(NOME_FONTE, Font.BOLD, 40));
+        FontMetrics metrics = getFontMetrics(g.getFont());
+        g.drawString("Pontos: " + blocosComidos, (LARGURA_TELA - metrics.stringWidth("Pontos: " + blocosComidos)) / 2, g.getFont().getSize());
+
+    }
+
+    public void desenharComida(Graphics g){
+        g.setColor(Color.red);
+        g.fillOval(blocoX, blocoY, TAMANHO_BLOCO, TAMANHO_BLOCO);
+    }
+
+
+    public void criarBloco(){
         blocoX = random.nextInt(LARGURA_TELA / TAMANHO_BLOCO) * TAMANHO_BLOCO;
         blocoY = random.nextInt(ALTURA_TELA / TAMANHO_BLOCO) * TAMANHO_BLOCO;
+    }
+
+    public void posicionandoCobra(){
+        for (int i = 0; i < SNAKE.length; i++) {
+            SNAKE[i] = new Node(500,300);
+        }
+    }
+
+    public void desenharTela(Graphics g){
+
+        if (estaRodando){
+
+            desenharCobra(g);
+            desenharComida(g);
+            desenharAnuncioP(g);
+
+        } else {
+            fimDeJogo(g);
+        }
+
+    }
+
+    public void alcancarBloco() {
+
+        if (SNAKE[0].x == blocoX && SNAKE[0].y == blocoY){
+            corpoCobra++;
+            blocosComidos++;
+            criarBloco();
+        }
+
+    }
+
+    public void validarLimites() {
+
+        //cabeça bateu no corpo
+        for (int i = corpoCobra; i > 0; i--){
+            if (SNAKE[0].x == SNAKE[i].x && SNAKE[0].y == SNAKE[i].y){
+                estaRodando = false;
+                break;
+            }
+        }
+
+        //A cabeça tocou uma das bordas Direita ou esquerda
+        if (SNAKE[0].x < 0 || SNAKE[0].x > LARGURA_TELA){
+            estaRodando = false;
+        }
+
+        //A cabeça tocou no topo ou embaixo
+        if (SNAKE[0].y < 0 || SNAKE[0].y > ALTURA_TELA){
+            estaRodando = false;
+        }
+
+        if (!estaRodando){
+            timer.stop();
+        }
+
+    }
+
+    private void andar() {
+
+        for (int i = corpoCobra; i > 0; i--){
+            SNAKE[i].x = SNAKE[i - 1].x;
+            SNAKE[i].y = SNAKE[i - 1].y;
+        }
+
+        switch (direcao){
+
+            case 'W':
+                SNAKE[0].y = SNAKE[0].y - TAMANHO_BLOCO;
+                break;
+            case 'S':
+                SNAKE[0].y = SNAKE[0].y + TAMANHO_BLOCO;
+                break;
+            case 'A':
+                SNAKE[0].x = SNAKE[0].x - TAMANHO_BLOCO;
+                break;
+            case 'D':
+                SNAKE[0].x = SNAKE[0].x + TAMANHO_BLOCO;
+                break;
+
+            default:
+                break;
+
+        }
+
     }
 
     public void fimDeJogo(Graphics g){
@@ -108,10 +195,26 @@ public class TelaJogo extends JPanel implements ActionListener {
         g.drawString("\uD83D\uDE00 Fim do Jogo", (LARGURA_TELA - fonteFinal.stringWidth("Fim do Jogo")) / 2, ALTURA_TELA / 2);
 
         if (!estaRodando){
-            add(botao);
+            add(botaoNovoJogo);
         }
 
     }
+
+    ActionListener e = new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+
+            estaRodando = true;
+            blocosComidos = 0;
+            corpoCobra = 6;
+            posicionandoCobra();
+            remove(botaoNovoJogo);
+            validarLimites();
+            iniciarJogo();
+            repaint();
+
+        }
+    };
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -124,72 +227,6 @@ public class TelaJogo extends JPanel implements ActionListener {
         repaint();
 
     }
-
-    private void validarLimites() {
-
-        //cabeça bateu no corpo
-        for (int i = corpoCobra; i > 0; i--){
-            if (eixoX[0] == eixoX[i] && eixoY[0] == eixoY[i]){
-                estaRodando = false;
-                break;
-            }
-        }
-
-        //A cabeça tocou uma das bordas Direita ou esquerda
-        if (eixoX[0] < 0 || eixoX[0] > LARGURA_TELA){
-            estaRodando = false;
-        }
-
-        //A cabeça tocou no topo ou embaixo
-        if (eixoY[0] < 0 || eixoY[0] > ALTURA_TELA){
-            estaRodando = false;
-        }
-
-        if (!estaRodando){
-            timer.stop();
-        }
-
-    }
-
-    private void alcancarBloco() {
-
-        if (eixoX[0] == blocoX && eixoY[0] == blocoY){
-            corpoCobra++;
-            blocosComidos++;
-            criarBloco();
-        }
-
-    }
-
-    private void andar() {
-
-        for (int i = corpoCobra; i > 0; i--){
-            eixoX[i] = eixoX[i - 1];
-            eixoY[i] = eixoY[i - 1];
-        }
-
-        switch (direcao){
-
-            case 'W':
-                eixoY[0] = eixoY[0] - TAMANHO_BLOCO;
-                break;
-            case 'S':
-                eixoY[0] = eixoY[0] + TAMANHO_BLOCO;
-                break;
-            case 'A':
-                eixoX[0] = eixoX[0] - TAMANHO_BLOCO;
-                break;
-            case 'D':
-                eixoX[0] = eixoX[0] + TAMANHO_BLOCO;
-                break;
-
-            default:
-                break;
-
-        }
-
-    }
-
 
     private class LeitorDeTeclasAdapter implements KeyListener {
 
@@ -232,4 +269,5 @@ public class TelaJogo extends JPanel implements ActionListener {
 
         }
     }
+
 }
